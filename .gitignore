@@ -1,0 +1,19 @@
+# Dependencies & build (app)
+test-management-app/node_modules/
+test-management-app/dist/
+test-management-app/dist-ssr/
+
+# Env — only .env.example is committed
+test-management-app/.env
+test-management-app/.env.*
+!test-management-app/.env.example
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor (optional)
+.idea/
+.vscode/*
+!.vscode/extensions.json
