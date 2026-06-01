@@ -356,7 +356,7 @@ export function QuestionsPage() {
 
   return (
 
-    <div className="-m-4 flex min-h-[calc(100vh-4rem)] min-w-0 flex-col sm:-m-6 lg:flex-row">
+    <div className="-m-4 flex min-h-[calc(100vh-4rem)] min-w-0 flex-row overflow-hidden sm:-m-6">
 
       <QuestionSidebar
 

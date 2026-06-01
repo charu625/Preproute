@@ -14,12 +14,12 @@ export function QuestionSidebar({
   const items = Array.from({ length: Math.max(totalQuestions, 1) }, (_, i) => i)
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-white">
-      <div className="border-b border-border px-4 py-4">
-        <h2 className="text-sm font-semibold text-slate-800">Question creation</h2>
-        <p className="mt-1 text-xs text-muted">Total Questions: {totalQuestions}</p>
+    <aside className="flex h-full min-h-0 w-32 shrink-0 flex-col border-r border-border bg-white sm:w-40 md:w-48 lg:w-64">
+      <div className="shrink-0 border-b border-border px-2 py-3 sm:px-4 sm:py-4">
+        <h2 className="text-xs font-semibold text-slate-800 sm:text-sm">Question creation</h2>
+        <p className="mt-0.5 text-[10px] text-muted sm:mt-1 sm:text-xs">Total: {totalQuestions}</p>
       </div>
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
         <ul className="space-y-2">
           {items.map((i) => {
             const isComplete = i < completedCount
@@ -29,7 +29,7 @@ export function QuestionSidebar({
                 <button
                   type="button"
                   onClick={() => onSelectQuestion(i)}
-                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                  className={`flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs transition sm:px-3 sm:py-2.5 sm:text-sm ${
                     isActive
                       ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200'
                       : isComplete
@@ -37,7 +37,8 @@ export function QuestionSidebar({
                         : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
                   }`}
                 >
-                  <span className="font-medium">Question {i + 1}</span>
+                  <span className="truncate font-medium sm:hidden">Q{i + 1}</span>
+                  <span className="hidden truncate font-medium sm:inline">Question {i + 1}</span>
                   <span className="flex items-center gap-1">
                     {isComplete && (
                       <svg className="h-4 w-4 text-success" fill="currentColor" viewBox="0 0 20 20">
