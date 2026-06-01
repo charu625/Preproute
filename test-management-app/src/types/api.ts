@@ -109,6 +109,7 @@ export interface QuestionPayload {
   explanation?: string
   difficulty?: string
   test_id: string
+  subject: string
   topic?: string
   sub_topic?: string
   media_url?: string

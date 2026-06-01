@@ -10,6 +10,8 @@ import { z } from 'zod'
 
 import { bulkCreateQuestions, fetchQuestionsBulk } from '../api/questions'
 
+import { getSubjects } from '../api/subjects'
+
 import { getTestById, updateTest } from '../api/tests'
 
 import { QuestionSidebar } from '../components/test/QuestionSidebar'
@@ -22,11 +24,13 @@ import { Button } from '../components/ui/Button'
 
 import { Select } from '../components/ui/Select'
 
-import type { Question, Test } from '../types/api'
+import type { Question, Subject, Test } from '../types/api'
 
 import { useTestBuilderStore } from '../store/testBuilderStore'
 
 import { getApiErrorMessage } from '../utils/format'
+
+import { resolveSubjectId } from '../utils/subject'
 
 
 
@@ -73,6 +77,8 @@ export function QuestionsPage() {
   const navigate = useNavigate()
 
   const [test, setTest] = useState<Test | null>(null)
+
+  const [subjects, setSubjects] = useState<Subject[]>([])
 
   const [savedQuestions, setSavedQuestions] = useState<Question[]>([])
 
@@ -180,6 +186,16 @@ export function QuestionsPage() {
 
 
 
+  useEffect(() => {
+    void getSubjects().then((res) => setSubjects(res.data ?? []))
+  }, [])
+
+
+
+  const testSubjectId = test ? resolveSubjectId(test.subject, subjects) : ''
+
+
+
   const completedCount = savedQuestions.length + pendingQuestions.length
 
 
@@ -218,6 +234,13 @@ export function QuestionsPage() {
 
     if (!id) return
 
+    if (!testSubjectId) {
+      setApiError('Test subject is missing. Edit the test and select a subject first.')
+      return
+    }
+
+
+
     const payload = {
 
       type: 'mcq' as const,
@@ -225,6 +248,8 @@ export function QuestionsPage() {
       ...values,
 
       test_id: id,
+
+      subject: testSubjectId,
 
     }
 
@@ -302,6 +327,13 @@ export function QuestionsPage() {
 
 
 
+    if (pendingQuestions.length > 0 && !testSubjectId) {
+      setApiError('Test subject is missing. Edit the test and select a subject first.')
+      return
+    }
+
+
+
     setSaving(true)
 
     setApiError('')
@@ -314,7 +346,17 @@ export function QuestionsPage() {
 
       if (pendingQuestions.length > 0) {
 
-        const created = await bulkCreateQuestions(pendingQuestions)
+        const questionsToCreate = pendingQuestions.map((q) => ({
+
+          ...q,
+
+          subject: q.subject || testSubjectId,
+
+        }))
+
+
+
+        const created = await bulkCreateQuestions(questionsToCreate)
 
         const newIds = (created.data ?? []).map((q) => q.id)
 
