@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 
+const TEST_PREVIEW_PATH = /^\/tests\/[^/]+\/preview$/
+
 const navItems = [
   {
     to: '/dashboard',
     label: 'Dashboard',
+    isActive: (path: string) => path === '/dashboard',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path
@@ -20,6 +23,7 @@ const navItems = [
   {
     to: '/tests/new',
     label: 'Test Creation',
+    isActive: (path: string) => path.startsWith('/tests') && !TEST_PREVIEW_PATH.test(path),
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path
@@ -30,11 +34,11 @@ const navItems = [
         />
       </svg>
     ),
-    match: (path: string) => path.startsWith('/tests'),
   },
   {
     to: '/dashboard',
     label: 'Test Tracking',
+    isActive: (path: string) => TEST_PREVIEW_PATH.test(path),
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path
@@ -69,11 +73,9 @@ function SidebarNav({
         <NavLink
           key={item.label}
           to={item.to}
-          end={item.to === '/dashboard' && item.label === 'Dashboard'}
           onClick={onNavigate}
-          className={({ isActive }) => {
-            const active =
-              isActive || (item.match?.(pathname) && item.label === 'Test Creation')
+          className={() => {
+            const active = item.isActive(pathname)
             return `relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
               active
                 ? 'bg-brand-50 text-brand-600 before:absolute before:left-0 before:top-1 before:bottom-1 before:w-1 before:rounded-r before:bg-brand-500'
@@ -97,18 +99,24 @@ export function AppLayout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [mobileNavSessionPath, setMobileNavSessionPath] = useState<string | null>(null)
 
-  const closeMobileNav = () => setMobileNavOpen(false)
+  const mobileNavOpen =
+    mobileNavSessionPath !== null && mobileNavSessionPath === location.pathname
+
+  const openMobileNav = () => setMobileNavSessionPath(location.pathname)
+
+  const closeMobileNav = () => setMobileNavSessionPath(null)
+
+  const toggleMobileNav = () => {
+    if (mobileNavOpen) closeMobileNav()
+    else openMobileNav()
+  }
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
-
-  useEffect(() => {
-    closeMobileNav()
-  }, [location.pathname])
 
   useEffect(() => {
     if (!mobileNavOpen) return
@@ -181,7 +189,7 @@ export function AppLayout() {
               className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
               aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileNavOpen}
-              onClick={() => setMobileNavOpen((open) => !open)}
+              onClick={toggleMobileNav}
             >
               <HamburgerIcon />
             </button>
