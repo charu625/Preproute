@@ -25,7 +25,7 @@ import { Button } from '../components/ui/Button'
 
 import { Select } from '../components/ui/Select'
 
-import type { Question, Subject, Test } from '../types/api'
+import type { Question, QuestionPayload, Subject, Test } from '../types/api'
 
 import { useTestBuilderStore } from '../store/testBuilderStore'
 
@@ -66,7 +66,44 @@ type QuestionFormValues = z.infer<typeof questionSchema>
 
 const OPTION_KEYS = ['option1', 'option2', 'option3', 'option4'] as const
 
+const EMPTY_QUESTION_FORM: QuestionFormValues = {
+  question: '',
+  option1: '',
+  option2: '',
+  option3: '',
+  option4: '',
+  correct_option: 'option1',
+  explanation: '',
+  difficulty: 'easy',
+  media_url: '',
+}
 
+function payloadToFormValues(
+  q: Pick<
+    QuestionPayload,
+    | 'question'
+    | 'option1'
+    | 'option2'
+    | 'option3'
+    | 'option4'
+    | 'correct_option'
+    | 'explanation'
+    | 'difficulty'
+    | 'media_url'
+  >,
+): QuestionFormValues {
+  return {
+    question: q.question,
+    option1: q.option1,
+    option2: q.option2,
+    option3: q.option3,
+    option4: q.option4,
+    correct_option: q.correct_option,
+    explanation: q.explanation ?? '',
+    difficulty: (q.difficulty as QuestionFormValues['difficulty']) || 'easy',
+    media_url: q.media_url ?? '',
+  }
+}
 
 export function QuestionsPage() {
 
@@ -216,37 +253,41 @@ export function QuestionsPage() {
 
   const completedCount = savedQuestions.length + pendingQuestions.length
 
+  const canPublish = completedCount >= totalTarget && totalTarget > 0
 
+  const questionsRemaining = Math.max(0, totalTarget - completedCount)
 
-  const resetForm = () => {
+  const loadQuestionAtIndex = useCallback(
+    (index: number) => {
+      setCurrentIndex(index)
 
-    reset({
+      if (index < savedQuestions.length) {
+        reset(payloadToFormValues(savedQuestions[index]))
+        setEditingPendingIndex(null)
+        return
+      }
 
-      question: '',
+      const pendingIndex = index - savedQuestions.length
+      if (pendingIndex >= 0 && pendingIndex < pendingQuestions.length) {
+        reset(payloadToFormValues(pendingQuestions[pendingIndex]))
+        setEditingPendingIndex(pendingIndex)
+        return
+      }
 
-      option1: '',
+      reset(EMPTY_QUESTION_FORM)
+      setEditingPendingIndex(null)
+    },
+    [savedQuestions, pendingQuestions, reset],
+  )
 
-      option2: '',
+  useEffect(() => {
+    loadQuestionAtIndex(currentIndex)
+  }, [savedQuestions, loadQuestionAtIndex, currentIndex])
 
-      option3: '',
-
-      option4: '',
-
-      correct_option: 'option1',
-
-      explanation: '',
-
-      difficulty: 'easy',
-
-      media_url: '',
-
-    })
-
-    setEditingPendingIndex(null)
-
+  const handleRemovePending = (index: number) => {
+    removePendingQuestion(index)
+    loadQuestionAtIndex(currentIndex)
   }
-
-
 
   const onSaveQuestion = (values: QuestionFormValues) => {
 
@@ -273,58 +314,33 @@ export function QuestionsPage() {
 
 
 
-    if (editingPendingIndex !== null) {
-
+    if (currentIndex < savedQuestions.length) {
+      setSavedQuestions((prev) => {
+        const next = [...prev]
+        next[currentIndex] = { ...next[currentIndex], ...payload }
+        return next
+      })
+    } else if (editingPendingIndex !== null) {
       updatePendingQuestion(editingPendingIndex, payload)
-
     } else {
-
       addPendingQuestion(payload)
-
     }
 
-    resetForm()
+    setNotice('')
+    setApiError('')
 
+    const nextIndex = Math.min(currentIndex + 1, totalTarget - 1)
     if (currentIndex < totalTarget - 1) {
-
-      setCurrentIndex((i) => i + 1)
-
+      loadQuestionAtIndex(nextIndex)
+    } else {
+      loadQuestionAtIndex(currentIndex)
     }
-
   }
 
 
 
   const editPending = (index: number) => {
-
-    const q = pendingQuestions[index]
-
-    reset({
-
-      question: q.question,
-
-      option1: q.option1,
-
-      option2: q.option2,
-
-      option3: q.option3,
-
-      option4: q.option4,
-
-      correct_option: q.correct_option,
-
-      explanation: q.explanation ?? '',
-
-      difficulty: q.difficulty ?? 'easy',
-
-      media_url: q.media_url ?? '',
-
-    })
-
-    setEditingPendingIndex(index)
-
-    setCurrentIndex(savedQuestions.length + index)
-
+    loadQuestionAtIndex(savedQuestions.length + index)
   }
 
 
@@ -348,8 +364,8 @@ export function QuestionsPage() {
         return
       }
 
-      const slotsLeft = totalTarget - completedCount - pendingQuestions.length
-      const toAdd = questions.slice(0, Math.max(0, slotsLeft))
+      const slotsLeft = Math.max(0, totalTarget - savedQuestions.length - pendingQuestions.length)
+      const toAdd = questions.slice(0, slotsLeft)
       const skipped = questions.length - toAdd.length
 
       toAdd.forEach((q) => addPendingQuestion({ type: 'mcq', ...q }))
@@ -362,6 +378,12 @@ export function QuestionsPage() {
       setNotice(parts.join(' '))
       if (errors.length > 0 && toAdd.length === 0) {
         setApiError('CSV import failed. Check column format and download the template.')
+      }
+
+      if (toAdd.length > 0) {
+        const { pendingQuestions: updatedPending } = useTestBuilderStore.getState()
+        const firstEmpty = savedQuestions.length + updatedPending.length
+        loadQuestionAtIndex(firstEmpty < totalTarget ? firstEmpty : totalTarget - 1)
       }
     } catch {
       setApiError('Could not read CSV file.')
@@ -384,17 +406,17 @@ export function QuestionsPage() {
 
     if (!id || !test) return
 
-    const totalQuestions = savedQuestions.length + pendingQuestions.length
-
-    if (totalQuestions < 1) {
-
+    if (completedCount < 1) {
       setApiError('Add at least one question before continuing.')
-
       return
-
     }
 
-
+    if (completedCount < totalTarget) {
+      setApiError(
+        `Add all ${totalTarget} questions before publishing. ${questionsRemaining} remaining.`,
+      )
+      return
+    }
 
     if (pendingQuestions.length > 0 && !testSubjectId) {
       setApiError('Test subject is missing. Edit the test and select a subject first.')
@@ -477,7 +499,7 @@ export function QuestionsPage() {
 
         completedCount={completedCount}
 
-        onSelectQuestion={setCurrentIndex}
+        onSelectQuestion={loadQuestionAtIndex}
 
       />
 
@@ -501,13 +523,24 @@ export function QuestionsPage() {
 
           />
 
-          <Button onClick={handleSaveAndContinue} loading={saving} className="shrink-0">
-
+          <Button
+            onClick={handleSaveAndContinue}
+            loading={saving}
+            disabled={!canPublish || saving}
+            className="shrink-0"
+          >
             Publish
-
           </Button>
 
         </div>
+
+        {!canPublish && totalTarget > 0 && (
+          <p className="text-sm text-amber-700">
+            {completedCount === 0
+              ? `Add ${totalTarget} question(s) to publish this test.`
+              : `${questionsRemaining} more question(s) needed before you can publish.`}
+          </p>
+        )}
 
 
 
@@ -835,7 +868,7 @@ export function QuestionsPage() {
 
                         type="button"
 
-                        onClick={() => removePendingQuestion(i)}
+                        onClick={() => handleRemovePending(i)}
 
                         className="text-red-600 hover:underline"
 
@@ -895,10 +928,13 @@ export function QuestionsPage() {
 
               </Button>
 
-              <Button type="button" onClick={handleSaveAndContinue} loading={saving}>
-
+              <Button
+                type="button"
+                onClick={handleSaveAndContinue}
+                loading={saving}
+                disabled={!canPublish || saving}
+              >
                 Next
-
               </Button>
 
             </div>
