@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useForm } from 'react-hook-form'
 
@@ -14,6 +14,7 @@ import { getSubjects } from '../api/subjects'
 
 import { getTestById, updateTest } from '../api/tests'
 
+import { QuestionRichEditor, type QuestionRichEditorHandle } from '../components/test/QuestionRichEditor'
 import { QuestionSidebar } from '../components/test/QuestionSidebar'
 
 import { TestSummaryCard } from '../components/test/TestSummaryCard'
@@ -30,6 +31,7 @@ import { useTestBuilderStore } from '../store/testBuilderStore'
 
 import { getApiErrorMessage } from '../utils/format'
 
+import { parseQuestionsCsv, QUESTION_CSV_TEMPLATE } from '../utils/questionCsv'
 import { resolveSubjectId } from '../utils/subject'
 
 
@@ -66,10 +68,6 @@ const OPTION_KEYS = ['option1', 'option2', 'option3', 'option4'] as const
 
 
 
-const FORMAT_BUTTONS = ['B', 'I', 'U', 'S', '≡', '•', '1.', '🖼']
-
-
-
 export function QuestionsPage() {
 
   const { id } = useParams<{ id: string }>()
@@ -88,7 +86,13 @@ export function QuestionsPage() {
 
   const [apiError, setApiError] = useState('')
 
+  const [notice, setNotice] = useState('')
+
   const [saving, setSaving] = useState(false)
+
+  const questionEditorRef = useRef<QuestionRichEditorHandle>(null)
+
+  const csvInputRef = useRef<HTMLInputElement>(null)
 
 
 
@@ -113,6 +117,10 @@ export function QuestionsPage() {
     watch,
 
     setValue,
+
+    resetField,
+
+    getValues,
 
     formState: { errors },
 
@@ -147,6 +155,16 @@ export function QuestionsPage() {
 
 
   const correctOption = watch('correct_option')
+
+  const clearOption = (key: (typeof OPTION_KEYS)[number]) => {
+    resetField(key, { defaultValue: '' })
+    if (correctOption === key) {
+      const values = getValues()
+      const fallback =
+        OPTION_KEYS.find((k) => k !== key && values[k]?.trim()) ?? 'option1'
+      setValue('correct_option', fallback)
+    }
+  }
 
 
 
@@ -311,6 +329,57 @@ export function QuestionsPage() {
 
 
 
+  const handleCsvImport = async (file: File) => {
+    if (!id) return
+
+    if (!testSubjectId) {
+      setApiError('Test subject is missing. Edit the test and select a subject before importing CSV.')
+      return
+    }
+
+    setApiError('')
+    setNotice('')
+    try {
+      const text = await file.text()
+      const { questions, errors } = parseQuestionsCsv(text, id, testSubjectId)
+
+      if (questions.length === 0) {
+        setApiError(errors[0] ?? 'No valid questions found in CSV.')
+        return
+      }
+
+      const slotsLeft = totalTarget - completedCount - pendingQuestions.length
+      const toAdd = questions.slice(0, Math.max(0, slotsLeft))
+      const skipped = questions.length - toAdd.length
+
+      toAdd.forEach((q) => addPendingQuestion({ type: 'mcq', ...q }))
+
+      const parts: string[] = []
+      if (toAdd.length > 0) parts.push(`Imported ${toAdd.length} question(s) from CSV.`)
+      if (skipped > 0) parts.push(`${skipped} row(s) skipped (test question limit reached).`)
+      if (errors.length > 0) parts.push(`${errors.length} row(s) had errors.`)
+
+      setNotice(parts.join(' '))
+      if (errors.length > 0 && toAdd.length === 0) {
+        setApiError('CSV import failed. Check column format and download the template.')
+      }
+    } catch {
+      setApiError('Could not read CSV file.')
+    } finally {
+      if (csvInputRef.current) csvInputRef.current.value = ''
+    }
+  }
+
+  const downloadCsvTemplate = () => {
+    const blob = new Blob([QUESTION_CSV_TEMPLATE], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'questions-template.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   const handleSaveAndContinue = async () => {
 
     if (!id || !test) return
@@ -468,73 +537,99 @@ export function QuestionsPage() {
 
             </h2>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
 
-              <span className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-slate-600">
+              <button
+
+                type="button"
+
+                title="Multiple choice question (active)"
+
+                onClick={() => questionEditorRef.current?.focus()}
+
+                className="rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
+
+              >
 
                 + MCQ
 
-              </span>
+              </button>
 
-              <span className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-slate-600">
+              <button
+
+                type="button"
+
+                title="Import questions from CSV file"
+
+                onClick={() => csvInputRef.current?.click()}
+
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+
+              >
 
                 CSV
 
-              </span>
+              </button>
 
-            </div>
+              <button
 
-          </div>
+                type="button"
 
+                title="Download sample CSV template"
 
+                onClick={downloadCsvTemplate}
 
-          <div className="rounded-xl border border-border bg-white shadow-sm">
+                className="text-xs text-brand-600 hover:underline"
 
-            <div className="flex flex-wrap gap-1 border-b border-border px-3 py-2">
+              >
 
-              {FORMAT_BUTTONS.map((btn) => (
+                Template
 
-                <button
+              </button>
 
-                  key={btn}
+              <input
 
-                  type="button"
+                ref={csvInputRef}
 
-                  className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                type="file"
 
-                >
+                accept=".csv,text/csv"
 
-                  {btn}
+                className="hidden"
 
-                </button>
+                onChange={(e) => {
 
-              ))}
+                  const file = e.target.files?.[0]
 
-            </div>
+                  if (file) void handleCsvImport(file)
 
-            <div className="relative p-4">
-
-              <textarea
-
-                className="min-h-[140px] w-full resize-y rounded-lg border-0 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0"
-
-                rows={5}
-
-                placeholder="Type here"
-
-                {...register('question')}
+                }}
 
               />
 
-              {errors.question && (
-
-                <p className="mt-1 text-xs text-red-600">{errors.question.message}</p>
-
-              )}
-
             </div>
 
           </div>
+
+
+
+          <QuestionRichEditor
+
+            ref={questionEditorRef}
+
+            registration={register('question')}
+
+            onQuestionChange={(value) =>
+
+              setValue('question', value, { shouldValidate: true, shouldDirty: true })
+
+            }
+
+            onMediaUrl={(url) => setValue('media_url', url, { shouldDirty: true })}
+
+            error={errors.question?.message}
+
+          />
 
 
 
@@ -580,9 +675,9 @@ export function QuestionsPage() {
 
                       type="button"
 
-                      onClick={() => setValue(key, '')}
+                      onClick={() => clearOption(key)}
 
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
 
                       aria-label={`Clear option ${idx + 1}`}
 
@@ -759,6 +854,14 @@ export function QuestionsPage() {
               </ul>
 
             </div>
+
+          )}
+
+
+
+          {notice && (
+
+            <div className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</div>
 
           )}
 
