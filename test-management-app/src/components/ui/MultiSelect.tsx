@@ -5,6 +5,7 @@ interface MultiSelectProps {
   onChange: (value: string[]) => void
   error?: string
   disabled?: boolean
+  emptyMessage?: string
 }
 
 export function MultiSelect({
@@ -14,6 +15,7 @@ export function MultiSelect({
   onChange,
   error,
   disabled,
+  emptyMessage = 'No options available',
 }: MultiSelectProps) {
   const toggle = (optionValue: string) => {
     if (value.includes(optionValue)) {
@@ -30,7 +32,7 @@ export function MultiSelect({
         className={`max-h-40 w-full min-w-0 max-w-full overflow-x-hidden overflow-y-auto rounded-lg border border-slate-300 bg-white p-2 ${disabled ? 'opacity-50' : ''} ${error ? 'border-red-500' : ''}`}
       >
         {options.length === 0 ? (
-          <p className="px-2 py-3 text-sm text-slate-500">No options available</p>
+          <p className="px-2 py-3 text-sm text-slate-500">{emptyMessage}</p>
         ) : (
           options.map((opt) => (
             <label

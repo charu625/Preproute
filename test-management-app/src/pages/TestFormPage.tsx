@@ -5,7 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { z } from 'zod'
 import {
   getSubjects,
-  getSubTopicsByTopics,
+  getSubTopicsForTopics,
   getTopicsBySubject,
 } from '../api/subjects'
 import { createTest, getTestById, updateTest } from '../api/tests'
@@ -25,7 +25,7 @@ const testFormSchema = z.object({
   type: z.string().min(1, 'Test type is required'),
   subject: z.string().min(1, 'Subject is required'),
   topics: z.array(z.string()).min(1, 'Select at least one topic'),
-  sub_topics: z.array(z.string()),
+  sub_topics: z.array(z.string()).min(1, 'Select at least one sub topic'),
   difficulty: z.enum(['easy', 'medium', 'hard']),
   correct_marks: z.number().min(0),
   wrong_marks: z.number(),
@@ -66,6 +66,7 @@ export function TestFormPage() {
     watch,
     setValue,
     reset,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<TestFormValues>({
     resolver: zodResolver(testFormSchema),
@@ -118,10 +119,15 @@ export function TestFormPage() {
       setValue('sub_topics', [])
       return
     }
-    void getSubTopicsByTopics(selectedTopics).then((res) => {
-      setSubTopics(res.data ?? [])
+    void getSubTopicsForTopics(selectedTopics).then((loaded) => {
+      setSubTopics(loaded)
+      const loadedIds = loaded.map((st) => st.id)
+      const current = getValues('sub_topics')
+      const validIds = new Set(loadedIds)
+      const kept = current.filter((id) => validIds.has(id))
+      setValue('sub_topics', kept.length > 0 ? kept : loadedIds, { shouldValidate: true })
     })
-  }, [selectedTopics, setValue])
+  }, [selectedTopics, setValue, getValues])
 
   useEffect(() => {
     if (!isEdit || !id) return
@@ -156,8 +162,21 @@ export function TestFormPage() {
 
   const saveTest = async (values: TestFormValues, asDraft: boolean) => {
     setApiError('')
+    const subTopicIds =
+      values.sub_topics.length > 0
+        ? values.sub_topics
+        : subTopics.map((st) => st.id)
+
+    if (subTopicIds.length === 0) {
+      setApiError(
+        'This topic has no sub-topics in the system. Choose another topic, or ask an admin to add sub-topics for it before creating a test.',
+      )
+      return
+    }
+
     const payload = {
       ...values,
+      sub_topics: subTopicIds,
       status: asDraft ? null : undefined,
     }
 
@@ -230,7 +249,18 @@ export function TestFormPage() {
             label="Sub Topic"
             options={subTopics.map((st) => ({ value: st.id, label: st.name }))}
             value={watch('sub_topics')}
-            onChange={(v) => setValue('sub_topics', v)}
+            onChange={(v) => setValue('sub_topics', v, { shouldValidate: true })}
+            error={
+              errors.sub_topics?.message ??
+              (selectedTopics.length > 0 && subTopics.length === 0
+                ? 'No sub-topics exist for the selected topic(s). Pick another topic or add sub-topics in the admin backend.'
+                : undefined)
+            }
+            emptyMessage={
+              selectedTopics.length > 0
+                ? 'No sub-topics found for this topic. Try another topic or add sub-topics in the admin system.'
+                : 'Select a topic first'
+            }
             disabled={selectedTopics.length === 0}
           />
           <Input

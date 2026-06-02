@@ -27,3 +27,24 @@ export async function getSubTopicsByTopics(topicIds: string[]) {
   )
   return data
 }
+
+export async function getSubTopicsForTopics(topicIds: string[]): Promise<SubTopic[]> {
+  if (topicIds.length === 0) return []
+
+  const multiResponse = await getSubTopicsByTopics(topicIds)
+  let loaded = multiResponse.data ?? []
+
+  if (loaded.length === 0) {
+    const perTopic = await Promise.all(
+      topicIds.map((topicId) => getSubTopicsByTopic(topicId).then((res) => res.data ?? [])),
+    )
+    const seen = new Set<string>()
+    loaded = perTopic.flat().filter((st) => {
+      if (seen.has(st.id)) return false
+      seen.add(st.id)
+      return true
+    })
+  }
+
+  return loaded
+}
