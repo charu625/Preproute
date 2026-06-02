@@ -1,11 +1,7 @@
 import { Link } from 'react-router-dom'
+import type { BreadcrumbItem } from '../../types/ui'
 
-interface Crumb {
-  label: string
-  to?: string
-}
-
-export function Breadcrumbs({ items }: { items: Crumb[] }) {
+export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   return (
     <nav className="text-sm text-muted" aria-label="Breadcrumb">
       {items.map((item, i) => (

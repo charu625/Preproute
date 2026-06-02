@@ -6,15 +6,13 @@ import { useForm } from 'react-hook-form'
 
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
-import { z } from 'zod'
-
 import { bulkCreateQuestions, fetchQuestionsBulk } from '../api/questions'
 
 import { getSubjects } from '../api/subjects'
 
 import { getTestById, updateTest } from '../api/tests'
 
-import { QuestionRichEditor, type QuestionRichEditorHandle } from '../components/test/QuestionRichEditor'
+import { QuestionRichEditor } from '../components/test/QuestionRichEditor'
 import { QuestionSidebar } from '../components/test/QuestionSidebar'
 
 import { TestSummaryCard } from '../components/test/TestSummaryCard'
@@ -25,85 +23,20 @@ import { Button } from '../components/ui/Button'
 
 import { Select } from '../components/ui/Select'
 
-import type { Question, QuestionPayload, Subject, Test } from '../types/api'
-
+import {
+  DIFFICULTY_OPTIONS,
+  EMPTY_QUESTION_FORM,
+  OPTION_KEYS,
+} from '../constants/question'
+import { questionSchema } from '../schemas/question'
 import { useTestBuilderStore } from '../store/testBuilderStore'
-
+import type { Question, Subject, Test } from '../types/api'
+import type { QuestionFormValues } from '../types/forms'
+import type { QuestionRichEditorHandle } from '../types/components'
 import { getApiErrorMessage } from '../utils/format'
-
 import { parseQuestionsCsv, QUESTION_CSV_TEMPLATE } from '../utils/questionCsv'
+import { payloadToFormValues } from '../utils/questionForm'
 import { resolveSubjectId } from '../utils/subject'
-
-
-
-const questionSchema = z.object({
-
-  question: z.string().min(1, 'Question text is required'),
-
-  option1: z.string().min(1, 'Option 1 is required'),
-
-  option2: z.string().min(1, 'Option 2 is required'),
-
-  option3: z.string().min(1, 'Option 3 is required'),
-
-  option4: z.string().min(1, 'Option 4 is required'),
-
-  correct_option: z.enum(['option1', 'option2', 'option3', 'option4']),
-
-  explanation: z.string().optional(),
-
-  difficulty: z.string().optional(),
-
-  media_url: z.string().optional(),
-
-})
-
-
-
-type QuestionFormValues = z.infer<typeof questionSchema>
-
-
-
-const OPTION_KEYS = ['option1', 'option2', 'option3', 'option4'] as const
-
-const EMPTY_QUESTION_FORM: QuestionFormValues = {
-  question: '',
-  option1: '',
-  option2: '',
-  option3: '',
-  option4: '',
-  correct_option: 'option1',
-  explanation: '',
-  difficulty: 'easy',
-  media_url: '',
-}
-
-function payloadToFormValues(
-  q: Pick<
-    QuestionPayload,
-    | 'question'
-    | 'option1'
-    | 'option2'
-    | 'option3'
-    | 'option4'
-    | 'correct_option'
-    | 'explanation'
-    | 'difficulty'
-    | 'media_url'
-  >,
-): QuestionFormValues {
-  return {
-    question: q.question,
-    option1: q.option1,
-    option2: q.option2,
-    option3: q.option3,
-    option4: q.option4,
-    correct_option: q.correct_option,
-    explanation: q.explanation ?? '',
-    difficulty: (q.difficulty as QuestionFormValues['difficulty']) || 'easy',
-    media_url: q.media_url ?? '',
-  }
-}
 
 export function QuestionsPage() {
 
@@ -774,15 +707,7 @@ export function QuestionsPage() {
 
                 placeholder="Select from Drop-down"
 
-                options={[
-
-                  { value: 'easy', label: 'Easy' },
-
-                  { value: 'medium', label: 'Medium' },
-
-                  { value: 'hard', label: 'Hard' },
-
-                ]}
+                options={DIFFICULTY_OPTIONS}
 
                 {...register('difficulty')}
 

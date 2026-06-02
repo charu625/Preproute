@@ -12,7 +12,7 @@ export function formatStatus(status: string | null | undefined): string {
   return status.charAt(0).toUpperCase() + status.slice(1)
 }
 
-const API_HOST = 'admin-moderator-backend-staging.up.railway.app'
+import { API_HOST } from '../constants/api'
 
 export function getApiErrorMessage(error: unknown): string {
   if (error && typeof error === 'object') {

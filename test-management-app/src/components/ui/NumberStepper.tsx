@@ -1,9 +1,4 @@
-interface NumberStepperProps {
-  label: string
-  value: number
-  onChange: (value: number) => void
-  prefix?: string
-}
+import type { NumberStepperProps } from '../../types/ui'
 
 export function NumberStepper({ label, value, onChange, prefix = '' }: NumberStepperProps) {
   const display = `${prefix}${value >= 0 && prefix === '+' ? value : value}`

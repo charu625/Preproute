@@ -1,12 +1,4 @@
-interface MultiSelectProps {
-  label?: string
-  options: { value: string; label: string }[]
-  value: string[]
-  onChange: (value: string[]) => void
-  error?: string
-  disabled?: boolean
-  emptyMessage?: string
-}
+import type { MultiSelectProps } from '../../types/ui'
 
 export function MultiSelect({
   label,

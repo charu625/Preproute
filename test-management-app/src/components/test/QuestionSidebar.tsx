@@ -1,9 +1,4 @@
-interface QuestionSidebarProps {
-  totalQuestions: number
-  currentIndex: number
-  completedCount: number
-  onSelectQuestion: (index: number) => void
-}
+import type { QuestionSidebarProps } from '../../types/components'
 
 export function QuestionSidebar({
   totalQuestions,

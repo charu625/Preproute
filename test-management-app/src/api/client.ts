@@ -1,8 +1,6 @@
 import axios from 'axios'
+import { API_BASE_URL } from '../constants/api'
 import { useAuthStore } from '../store/authStore'
-
-// Use relative /api in dev (Vite proxy) and production (Vercel/Netlify rewrites) to avoid CORS.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

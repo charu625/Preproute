@@ -1,31 +1,13 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react'
-import type { UseFormRegisterReturn } from 'react-hook-form'
+import { QUESTION_EDITOR_TOOLBAR } from '../../constants/questionRichEditor'
+import type { QuestionRichEditorHandle, QuestionRichEditorProps } from '../../types/components'
 import {
   applyTextareaFormat,
   focusTextareaWithSelection,
   type TextFormatAction,
 } from '../../utils/textEditor'
 
-const TOOLBAR: { action: TextFormatAction; label: string; title: string }[] = [
-  { action: 'bold', label: 'B', title: 'Bold' },
-  { action: 'italic', label: 'I', title: 'Italic' },
-  { action: 'underline', label: 'U', title: 'Underline' },
-  { action: 'strike', label: 'S', title: 'Strikethrough' },
-  { action: 'align', label: '≡', title: 'Indent' },
-  { action: 'bullet', label: '•', title: 'Bullet list' },
-  { action: 'number', label: '1.', title: 'Numbered list' },
-]
-
-interface QuestionRichEditorProps {
-  registration: UseFormRegisterReturn<'question'>
-  onQuestionChange: (value: string) => void
-  error?: string
-  onMediaUrl?: (url: string) => void
-}
-
-export type QuestionRichEditorHandle = {
-  focus: () => void
-}
+export type { QuestionRichEditorHandle } from '../../types/components'
 
 export const QuestionRichEditor = forwardRef<QuestionRichEditorHandle, QuestionRichEditorProps>(
   function QuestionRichEditor({ registration, onQuestionChange, error, onMediaUrl }, ref) {
@@ -66,7 +48,7 @@ export const QuestionRichEditor = forwardRef<QuestionRichEditorHandle, QuestionR
   return (
     <div className="rounded-xl border border-border bg-white shadow-sm">
       <div className="flex flex-wrap gap-1 border-b border-border px-3 py-2">
-        {TOOLBAR.map(({ action, label, title }) => (
+        {QUESTION_EDITOR_TOOLBAR.map(({ action, label, title }) => (
           <button
             key={action}
             type="button"

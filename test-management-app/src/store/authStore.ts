@@ -1,14 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { User } from '../types/api'
-
-interface AuthState {
-  token: string | null
-  user: User | null
-  setAuth: (token: string, user: User) => void
-  logout: () => void
-  isAuthenticated: () => boolean
-}
+import type { AuthState } from '../types/store'
 
 export const useAuthStore = create<AuthState>()(
   persist(

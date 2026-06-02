@@ -1,21 +1,9 @@
 import { Link } from 'react-router-dom'
-import type { Test } from '../../types/api'
-
-interface TestSummaryCardProps {
-  test: Test
-  questionCount?: number
-  editHref?: string
-}
+import { TEST_TYPE_LABELS } from '../../constants/testSummary'
+import type { TestSummaryCardProps } from '../../types/components'
 
 function formatType(type: string) {
-  const map: Record<string, string> = {
-    chapterwise: 'Chapter Wise',
-    practice: 'Practice',
-    mock: 'Mock Test',
-    full_length: 'Full Length',
-    pyq: 'PYQ',
-  }
-  return map[type] ?? type
+  return TEST_TYPE_LABELS[type] ?? type
 }
 
 function formatDifficulty(d: string) {

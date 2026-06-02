@@ -1,13 +1,4 @@
-interface Tab {
-  value: string
-  label: string
-}
-
-interface SegmentedTabsProps {
-  tabs: Tab[]
-  value: string
-  onChange: (value: string) => void
-}
+import type { SegmentedTabsProps } from '../../types/ui'
 
 export function SegmentedTabs({ tabs, value, onChange }: SegmentedTabsProps) {
   return (

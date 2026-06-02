@@ -1,13 +1,5 @@
 import { create } from 'zustand'
-import type { QuestionPayload } from '../types/api'
-
-interface TestBuilderState {
-  pendingQuestions: QuestionPayload[]
-  addPendingQuestion: (question: QuestionPayload) => void
-  updatePendingQuestion: (index: number, question: QuestionPayload) => void
-  removePendingQuestion: (index: number) => void
-  clearPendingQuestions: () => void
-}
+import type { TestBuilderState } from '../types/store'
 
 export const useTestBuilderStore = create<TestBuilderState>((set) => ({
   pendingQuestions: [],

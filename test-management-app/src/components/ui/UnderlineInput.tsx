@@ -1,9 +1,5 @@
-import { forwardRef, type InputHTMLAttributes } from 'react'
-
-interface UnderlineInputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string
-  error?: string
-}
+import { forwardRef } from 'react'
+import type { UnderlineInputProps } from '../../types/ui'
 
 export const UnderlineInput = forwardRef<HTMLInputElement, UnderlineInputProps>(
   ({ label, error, className = '', id, ...props }, ref) => {

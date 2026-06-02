@@ -5,17 +5,10 @@ import { getTestById, publishTest } from '../api/tests'
 import { TestSummaryCard } from '../components/test/TestSummaryCard'
 import { Button } from '../components/ui/Button'
 import { RadioGroup } from '../components/ui/RadioGroup'
+import { LIVE_UNTIL_OPTIONS } from '../constants/preview'
+import { MCQ_OPTION_KEYS } from '../constants/question'
 import type { Question, Test } from '../types/api'
 import { getApiErrorMessage } from '../utils/format'
-
-const LIVE_UNTIL_OPTIONS = [
-  { value: 'always', label: 'Always Available' },
-  { value: '1week', label: '1 Week' },
-  { value: '2weeks', label: '2 Weeks' },
-  { value: '3weeks', label: '3 Weeks' },
-  { value: '1month', label: '1 Month' },
-  { value: 'custom', label: 'Custom Duration' },
-]
 
 export function PreviewPage() {
   const { id } = useParams<{ id: string }>()
@@ -189,7 +182,7 @@ export function PreviewPage() {
                     Q{idx + 1}. {q.question}
                   </p>
                   <ul className="mt-3 space-y-1.5 text-sm">
-                    {(['option1', 'option2', 'option3', 'option4'] as const).map((key) => (
+                    {MCQ_OPTION_KEYS.map((key) => (
                       <li
                         key={key}
                         className={`rounded px-2 py-1 ${

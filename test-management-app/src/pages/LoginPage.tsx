@@ -2,20 +2,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
-import { z } from 'zod'
 import { login } from '../api/auth'
 import { LoginIllustration } from '../components/illustrations/LoginIllustration'
 import { Button } from '../components/ui/Button'
 import { UnderlineInput } from '../components/ui/UnderlineInput'
+import { loginSchema } from '../schemas/login'
 import { useAuthStore } from '../store/authStore'
+import type { LoginForm } from '../types/forms'
 import { getApiErrorMessage } from '../utils/format'
-
-const loginSchema = z.object({
-  userId: z.string().min(1, 'User ID is required'),
-  password: z.string().min(1, 'Password is required'),
-})
-
-type LoginForm = z.infer<typeof loginSchema>
 
 export function LoginPage() {
   const navigate = useNavigate()

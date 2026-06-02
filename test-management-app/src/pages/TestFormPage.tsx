@@ -2,7 +2,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { z } from 'zod'
 import {
   getSubjects,
   getSubTopicsForTopics,
@@ -17,37 +16,11 @@ import { NumberStepper } from '../components/ui/NumberStepper'
 import { RadioGroup } from '../components/ui/RadioGroup'
 import { SegmentedTabs } from '../components/ui/SegmentedTabs'
 import { Select } from '../components/ui/Select'
+import { DIFFICULTIES, TEST_FORM_DEFAULTS, TYPE_TABS } from '../constants/testForm'
+import { testFormSchema } from '../schemas/testForm'
 import type { Subject, SubTopic, Topic } from '../types/api'
+import type { TestFormValues } from '../types/forms'
 import { getApiErrorMessage } from '../utils/format'
-
-const testFormSchema = z.object({
-  name: z.string().min(1, 'Test name is required'),
-  type: z.string().min(1, 'Test type is required'),
-  subject: z.string().min(1, 'Subject is required'),
-  topics: z.array(z.string()).min(1, 'Select at least one topic'),
-  sub_topics: z.array(z.string()).min(1, 'Select at least one sub topic'),
-  difficulty: z.enum(['easy', 'medium', 'hard']),
-  correct_marks: z.number().min(0),
-  wrong_marks: z.number(),
-  unattempt_marks: z.number(),
-  total_time: z.number().min(1, 'Total time must be at least 1 minute'),
-  total_marks: z.number().min(1),
-  total_questions: z.number().min(1),
-})
-
-type TestFormValues = z.infer<typeof testFormSchema>
-
-const TYPE_TABS = [
-  { value: 'chapterwise', label: 'Chapter Wise' },
-  { value: 'practice', label: 'PYQ' },
-  { value: 'mock', label: 'Mock Test' },
-]
-
-const DIFFICULTIES = [
-  { value: 'easy', label: 'Easy' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'hard', label: 'Difficult' },
-]
 
 export function TestFormPage() {
   const { id } = useParams<{ id: string }>()
@@ -70,20 +43,7 @@ export function TestFormPage() {
     formState: { errors, isSubmitting },
   } = useForm<TestFormValues>({
     resolver: zodResolver(testFormSchema),
-    defaultValues: {
-      name: '',
-      type: 'chapterwise',
-      subject: '',
-      topics: [],
-      sub_topics: [],
-      difficulty: 'easy',
-      correct_marks: 5,
-      wrong_marks: -1,
-      unattempt_marks: 0,
-      total_time: 60,
-      total_marks: 250,
-      total_questions: 50,
-    },
+    defaultValues: TEST_FORM_DEFAULTS,
   })
 
   const selectedSubject = watch('subject')

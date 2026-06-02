@@ -1,15 +1,4 @@
-interface Option {
-  value: string
-  label: string
-}
-
-interface RadioGroupProps {
-  label?: string
-  name: string
-  options: Option[]
-  value: string
-  onChange: (value: string) => void
-}
+import type { RadioGroupProps } from '../../types/ui'
 
 export function RadioGroup({ label, name, options, value, onChange }: RadioGroupProps) {
   return (

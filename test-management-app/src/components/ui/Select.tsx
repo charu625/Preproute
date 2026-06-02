@@ -8,15 +8,8 @@ import {
   useState,
   type ChangeEvent,
   type FocusEvent,
-  type SelectHTMLAttributes,
 } from 'react'
-
-interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children'> {
-  label?: string
-  error?: string
-  options: { value: string; label: string }[]
-  placeholder?: string
-}
+import type { SelectProps } from '../../types/ui'
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   (
@@ -129,7 +122,6 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           </label>
         )}
 
-        {/* Hidden native select for react-hook-form */}
         <select
           ref={hiddenSelectRef}
           id={selectId}
