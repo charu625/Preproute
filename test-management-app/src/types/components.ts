@@ -19,6 +19,7 @@ export interface QuestionRichEditorProps {
   registration: UseFormRegisterReturn<'question'>
   onQuestionChange: (value: string) => void
   error?: string
+  mediaUrl?: string
   onMediaUrl?: (url: string) => void
 }
 

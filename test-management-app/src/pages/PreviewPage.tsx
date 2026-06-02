@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { fetchQuestionsBulk } from '../api/questions'
 import { getTestById, publishTest } from '../api/tests'
@@ -15,7 +15,7 @@ export function PreviewPage() {
   const navigate = useNavigate()
   const [test, setTest] = useState<Test | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loadedId, setLoadedId] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
@@ -24,26 +24,42 @@ export function PreviewPage() {
   const [endDate, setEndDate] = useState('')
   const [endTime, setEndTime] = useState('')
 
-  const loadData = useCallback(async () => {
-    if (!id) return
-    setLoading(true)
-    try {
-      const testRes = await getTestById(id)
-      setTest(testRes.data)
-      if (testRes.data.questions?.length) {
-        const qRes = await fetchQuestionsBulk(testRes.data.questions)
-        setQuestions(qRes.data ?? [])
-      }
-    } catch (err) {
-      setError(getApiErrorMessage(err))
-    } finally {
-      setLoading(false)
-    }
-  }, [id])
+  const loading = Boolean(id) && loadedId !== id
 
   useEffect(() => {
-    void loadData()
-  }, [loadData])
+    if (!id) return
+
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const testRes = await getTestById(id)
+        if (cancelled) return
+
+        setTest(testRes.data)
+        if (testRes.data.questions?.length) {
+          const qRes = await fetchQuestionsBulk(testRes.data.questions)
+          if (cancelled) return
+          setQuestions(qRes.data ?? [])
+        } else {
+          setQuestions([])
+        }
+        setError('')
+        setLoadedId(id)
+      } catch (err) {
+        if (!cancelled) {
+          setError(getApiErrorMessage(err))
+          setTest(null)
+          setQuestions([])
+          setLoadedId(id)
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [id])
 
   const handlePublish = async () => {
     if (!id) return
@@ -181,6 +197,13 @@ export function PreviewPage() {
                   <p className="font-medium text-slate-900">
                     Q{idx + 1}. {q.question}
                   </p>
+                  {q.media_url ? (
+                    <img
+                      src={q.media_url}
+                      alt={`Question ${idx + 1} attachment`}
+                      className="mt-3 max-h-48 w-auto max-w-full rounded-lg border border-border object-contain"
+                    />
+                  ) : null}
                   <ul className="mt-3 space-y-1.5 text-sm">
                     {MCQ_OPTION_KEYS.map((key) => (
                       <li

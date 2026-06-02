@@ -1,5 +1,6 @@
 import type { QuestionPayload } from '../types/api'
 import type { QuestionFormValues } from '../types/forms'
+import { stripEmbeddedQuestionImages } from './questionText'
 
 export function payloadToFormValues(
   q: Pick<
@@ -16,7 +17,7 @@ export function payloadToFormValues(
   >,
 ): QuestionFormValues {
   return {
-    question: q.question,
+    question: stripEmbeddedQuestionImages(q.question),
     option1: q.option1,
     option2: q.option2,
     option3: q.option3,

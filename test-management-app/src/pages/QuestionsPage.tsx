@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
@@ -36,6 +36,7 @@ import type { QuestionRichEditorHandle } from '../types/components'
 import { getApiErrorMessage } from '../utils/format'
 import { parseQuestionsCsv, QUESTION_CSV_TEMPLATE } from '../utils/questionCsv'
 import { payloadToFormValues } from '../utils/questionForm'
+import { stripEmbeddedQuestionImages } from '../utils/questionText'
 import { resolveSubjectId } from '../utils/subject'
 
 export function QuestionsPage() {
@@ -67,64 +68,38 @@ export function QuestionsPage() {
 
 
   const { pendingQuestions, addPendingQuestion, updatePendingQuestion, removePendingQuestion, clearPendingQuestions } =
-
     useTestBuilderStore()
-
-
-
   const totalTarget = test?.total_questions ?? 50
 
-
-
   const {
-
     register,
-
     handleSubmit,
-
     reset,
-
-    watch,
-
+    control,
     setValue,
-
     resetField,
-
     getValues,
-
     formState: { errors },
-
   } = useForm<QuestionFormValues>({
-
     resolver: zodResolver(questionSchema),
-
     defaultValues: {
-
       question: '',
-
       option1: '',
-
       option2: '',
-
       option3: '',
-
       option4: '',
-
       correct_option: 'option1',
-
       explanation: '',
-
       difficulty: 'easy',
-
       media_url: '',
-
     },
-
   })
 
 
 
-  const correctOption = watch('correct_option')
+  const correctOption = useWatch({ control, name: 'correct_option', defaultValue: 'option1' })
+  const questionMediaUrl = useWatch({ control, name: 'media_url', defaultValue: '' })
+  const difficulty = useWatch({ control, name: 'difficulty', defaultValue: 'easy' })
 
   const clearOption = (key: (typeof OPTION_KEYS)[number]) => {
     resetField(key, { defaultValue: '' })
@@ -138,39 +113,33 @@ export function QuestionsPage() {
 
 
 
-  const loadTest = useCallback(async () => {
-
+  useEffect(() => {
     if (!id) return
 
-    try {
+    let cancelled = false
 
-      const response = await getTestById(id)
+    ;(async () => {
+      try {
+        const response = await getTestById(id)
+        if (cancelled) return
 
-      setTest(response.data)
-
-      if (response.data.questions?.length) {
-
-        const qResponse = await fetchQuestionsBulk(response.data.questions)
-
-        setSavedQuestions(qResponse.data ?? [])
-
+        setTest(response.data)
+        if (response.data.questions?.length) {
+          const qResponse = await fetchQuestionsBulk(response.data.questions)
+          if (cancelled) return
+          setSavedQuestions(qResponse.data ?? [])
+        } else {
+          setSavedQuestions([])
+        }
+      } catch (err) {
+        if (!cancelled) setApiError(getApiErrorMessage(err))
       }
+    })()
 
-    } catch (err) {
-
-      setApiError(getApiErrorMessage(err))
-
+    return () => {
+      cancelled = true
     }
-
   }, [id])
-
-
-
-  useEffect(() => {
-
-    void loadTest()
-
-  }, [loadTest])
 
 
 
@@ -190,10 +159,8 @@ export function QuestionsPage() {
 
   const questionsRemaining = Math.max(0, totalTarget - completedCount)
 
-  const loadQuestionAtIndex = useCallback(
+  const syncFormAtIndex = useCallback(
     (index: number) => {
-      setCurrentIndex(index)
-
       if (index < savedQuestions.length) {
         reset(payloadToFormValues(savedQuestions[index]))
         setEditingPendingIndex(null)
@@ -213,13 +180,22 @@ export function QuestionsPage() {
     [savedQuestions, pendingQuestions, reset],
   )
 
+  const selectQuestion = useCallback(
+    (index: number) => {
+      setCurrentIndex(index)
+      syncFormAtIndex(index)
+    },
+    [syncFormAtIndex],
+  )
+
   useEffect(() => {
-    loadQuestionAtIndex(currentIndex)
-  }, [savedQuestions, loadQuestionAtIndex, currentIndex])
+    const index = currentIndex
+    queueMicrotask(() => syncFormAtIndex(index))
+  }, [savedQuestions, pendingQuestions, syncFormAtIndex, currentIndex])
 
   const handleRemovePending = (index: number) => {
     removePendingQuestion(index)
-    loadQuestionAtIndex(currentIndex)
+    selectQuestion(currentIndex)
   }
 
   const onSaveQuestion = (values: QuestionFormValues) => {
@@ -234,11 +210,9 @@ export function QuestionsPage() {
 
 
     const payload = {
-
       type: 'mcq' as const,
-
       ...values,
-
+      question: stripEmbeddedQuestionImages(values.question),
       test_id: id,
 
       subject: testSubjectId,
@@ -264,16 +238,16 @@ export function QuestionsPage() {
 
     const nextIndex = Math.min(currentIndex + 1, totalTarget - 1)
     if (currentIndex < totalTarget - 1) {
-      loadQuestionAtIndex(nextIndex)
+      selectQuestion(nextIndex)
     } else {
-      loadQuestionAtIndex(currentIndex)
+      selectQuestion(currentIndex)
     }
   }
 
 
 
   const editPending = (index: number) => {
-    loadQuestionAtIndex(savedQuestions.length + index)
+    selectQuestion(savedQuestions.length + index)
   }
 
 
@@ -316,7 +290,7 @@ export function QuestionsPage() {
       if (toAdd.length > 0) {
         const { pendingQuestions: updatedPending } = useTestBuilderStore.getState()
         const firstEmpty = savedQuestions.length + updatedPending.length
-        loadQuestionAtIndex(firstEmpty < totalTarget ? firstEmpty : totalTarget - 1)
+        selectQuestion(firstEmpty < totalTarget ? firstEmpty : totalTarget - 1)
       }
     } catch {
       setApiError('Could not read CSV file.')
@@ -432,7 +406,7 @@ export function QuestionsPage() {
 
         completedCount={completedCount}
 
-        onSelectQuestion={loadQuestionAtIndex}
+        onSelectQuestion={selectQuestion}
 
       />
 
@@ -591,8 +565,8 @@ export function QuestionsPage() {
 
             }
 
+            mediaUrl={questionMediaUrl}
             onMediaUrl={(url) => setValue('media_url', url, { shouldDirty: true })}
-
             error={errors.question?.message}
 
           />
@@ -711,7 +685,7 @@ export function QuestionsPage() {
 
                 {...register('difficulty')}
 
-                value={watch('difficulty')}
+                value={difficulty}
 
               />
 
